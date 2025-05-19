@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 225">
+  <!-- Background -->
+  <rect width="400" height="225" fill="#121212"/>
+  
+  <!-- Grid pattern -->
+  <g stroke="#333333" stroke-width="0.5">
+    <g id="vertical-lines">
+      <line x1="50" y1="0" x2="50" y2="225"/>
+      <line x1="100" y1="0" x2="100" y2="225"/>
+      <line x1="150" y1="0" x2="150" y2="225"/>
+      <line x1="200" y1="0" x2="200" y2="225"/>
+      <line x1="250" y1="0" x2="250" y2="225"/>
+      <line x1="300" y1="0" x2="300" y2="225"/>
+      <line x1="350" y1="0" x2="350" y2="225"/>
+    </g>
+    <g id="horizontal-lines">
+      <line x1="0" y1="45" x2="400" y2="45"/>
+      <line x1="0" y1="90" x2="400" y2="90"/>
+      <line x1="0" y1="135" x2="400" y2="135"/>
+      <line x1="0" y1="180" x2="400" y2="180"/>
+    </g>
+  </g>
+  
+  <!-- Motion vectors -->
+  <g id="motion-vectors" stroke="#ff5722" stroke-width="2">
+    <!-- Circular pattern -->
+    <g fill="#ff5722">
+      <line x1="100" y1="90" x2="120" y2="75"/>
+      <polygon points="120,75 112,78 117,85"/>
+      
+      <line x1="150" y1="70" x2="170" y2="75"/>
+      <polygon points="170,75 164,69 162,77"/>
+      
+      <line x1="200" y1="70" x2="220" y2="65"/>
+      <polygon points="220,65 213,62 214,70"/>
+      
+      <line x1="250" y1="90" x2="265" y2="110"/>
+      <polygon points="265,110 264,102 258,107"/>
+      
+      <line x1="250" y1="150" x2="230" y2="165"/>
+      <polygon points="230,165 238,162 233,155"/>
+      
+      <line x1="200" y1="180" x2="180" y2="170"/>
+      <polygon points="180,170 184,177 188,170"/>
+      
+      <line x1="150" y1="170" x2="135" y2="155"/>
+      <polygon points="135,155 136,163 143,159"/>
+      
+      <line x1="120" y1="120" x2="120" y2="100"/>
+      <polygon points="120,100 116,107 124,107"/>
+    </g>
+  </g>
+  
+  <!-- Deformable convolution kernel -->
+  <g id="convolution-kernel">
+    <rect x="170" y="105" width="60" height="60" fill="none" stroke="#8e24aa" stroke-width="1.5"/>
+    
+    <!-- Original grid -->
+    <g stroke="#8e24aa" stroke-width="0.8" stroke-dasharray="2">
+      <line x1="170" y1="125" x2="230" y2="125"/>
+      <line x1="170" y1="145" x2="230" y2="145"/>
+      <line x1="190" y1="105" x2="190" y2="165"/>
+      <line x1="210" y1="105" x2="210" y2="165"/>
+    </g>
+    
+    <!-- Deformed grid -->
+    <g stroke="#4caf50" stroke-width="1.5">
+      <path d="M170,125 C180,120 220,120 230,130" fill="none"/>
+      <path d="M170,145 C180,150 220,150 230,140" fill="none"/>
+      <path d="M190,105 C185,115 185,155 195,165" fill="none"/>
+      <path d="M210,105 C215,115 215,155 205,165" fill="none"/>
+    </g>
+    
+    <!-- Kernel points -->
+    <g fill="#2196f3">
+      <circle cx="170" cy="105" r="3"/>
+      <circle cx="190" cy="105" r="3"/>
+      <circle cx="210" cy="105" r="3"/>
+      <circle cx="230" cy="105" r="3"/>
+      
+      <circle cx="170" cy="125" r="3"/>
+      <circle cx="190" cy="125" r="3"/>
+      <circle cx="210" cy="125" r="3"/>
+      <circle cx="230" cy="125" r="3"/>
+      
+      <circle cx="170" cy="145" r="3"/>
+      <circle cx="190" cy="145" r="3"/>
+      <circle cx="210" cy="145" r="3"/>
+      <circle cx="230" cy="145" r="3"/>
+      
+      <circle cx="170" cy="165" r="3"/>
+      <circle cx="190" cy="165" r="3"/>
+      <circle cx="210" cy="165" r="3"/>
+      <circle cx="230" cy="165" r="3"/>
+    </g>
+  </g>
+  
+  <!-- Title -->
+  <text x="200" y="30" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="white">Deformable Convolution with Motion Estimation</text>
+</svg>

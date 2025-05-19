@@ -1,0 +1,2023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deformable Convolution with Motion Estimation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #121212;
+            color: #f0f0f0;
+        }
+        h1 {
+            text-align: center;
+            color: #e0e0e0;
+            margin-bottom: 30px;
+            font-weight: 300;
+            font-size: 36px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+        .controls {
+            background-color: #1e1e1e;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        .visualization-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .frame-container {
+            background-color: #1e1e1e;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            padding: 20px;
+            position: relative;
+        }
+        .frame-container h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: 300;
+            color: #e0e0e0;
+        }
+        .process-container {
+            grid-column: span 2;
+            background-color: #1e1e1e;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        canvas {
+            width: 100%;
+            height: auto;
+            background-color: #000;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+        .settings {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        button:hover {
+            background-color: #0b7dda;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(33, 150, 243, 0.3);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #333;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #2196F3;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            background: #0b7dda;
+            transform: scale(1.2);
+        }
+        select {
+            padding: 10px;
+            border: 1px solid #333;
+            border-radius: 50px;
+            background-color: #333;
+            color: white;
+            width: 100%;
+        }
+        label {
+            font-weight: bold;
+            color: #ccc;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .control-group {
+            margin-bottom: 10px;
+        }
+        .button-container {
+            text-align: center;
+            margin-top: 25px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        .button-primary {
+            background-color: #2196F3;
+        }
+        .button-secondary {
+            background-color: #9c27b0;
+        }
+        .button-tertiary {
+            background-color: #4CAF50;
+        }
+        .info-panel {
+            background-color: #1e1e1e;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        .motion-pattern {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        .pattern-option {
+            background-color: #333;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .pattern-option:hover, .pattern-option.active {
+            background-color: #2196F3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(33, 150, 243, 0.3);
+        }
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+        }
+        .slider-value {
+            text-align: center;
+            margin-top: 5px;
+            color: #ccc;
+        }
+        .stage-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .stage {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            border-radius: 8px;
+            background-color: #333;
+            position: relative;
+        }
+        .stage.active {
+            background-color: #2196F3;
+            color: white;
+        }
+        .stage:not(:last-child):after {
+            content: '';
+            position: absolute;
+            right: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 2px;
+            background-color: #555;
+        }
+        .progress-bar {
+            height: 4px;
+            width: 100%;
+            background-color: #333;
+            margin-bottom: 20px;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .progress {
+            height: 100%;
+            background-color: #2196F3;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        #processCanvas {
+            height: 400px;
+        }
+        .legend {
+            display: flex;
+            justify-content: center;
+            margin-top: 15px;
+            gap: 20px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+        }
+        .description {
+            color: #bbb;
+            margin-top: 15px;
+            text-align: center;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>Deformable Convolution with Motion Estimation</h1>
+    <div class="container">
+        <div class="controls">
+            <div class="settings">
+                <div class="control-group">
+                    <label for="motionPattern">Motion Field Pattern</label>
+                    <div class="motion-pattern">
+                        <div class="pattern-option active" data-pattern="circular">Circular</div>
+                        <div class="pattern-option" data-pattern="swirl">Swirl</div>
+                        <div class="pattern-option" data-pattern="zoom">Zoom</div>
+                        <div class="pattern-option" data-pattern="translation">Translation</div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label for="convKernelSize">Conv Kernel Size</label>
+                    <select id="convKernelSize">
+                        <option value="3">3×3</option>
+                        <option value="5" selected>5×5</option>
+                        <option value="7">7×7</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label for="motionScale">Motion Scale</label>
+                    <div class="slider-container">
+                        <input type="range" id="motionScale" min="0.1" max="2" step="0.1" value="1">
+                        <div class="slider-value" id="motionScaleValue">1.0×</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="settings">
+                <div class="control-group">
+                    <label for="showGrids">Grid Density</label>
+                    <div class="slider-container">
+                        <input type="range" id="gridDensity" min="10" max="30" step="2" value="20">
+                        <div class="slider-value" id="gridDensityValue">20×20</div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label for="animationSpeed">Animation Speed</label>
+                    <div class="slider-container">
+                        <input type="range" id="animationSpeed" min="0.5" max="3" step="0.5" value="1">
+                        <div class="slider-value" id="animationSpeedValue">1.0×</div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label for="objectComplexity">Object Complexity</label>
+                    <div class="slider-container">
+                        <input type="range" id="objectComplexity" min="1" max="5" step="1" value="3">
+                        <div class="slider-value" id="objectComplexityValue">Medium</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="settings">
+                <div class="control-group">
+                    <label for="showVectors">Display Options</label>
+                    <div>
+                        <input type="checkbox" id="showVectors" checked>
+                        <label for="showVectors" style="display: inline; font-weight: normal;">Show Motion Vectors</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="showGrid" checked>
+                        <label for="showGrid" style="display: inline; font-weight: normal;">Show Deformation Grid</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="showKernels" checked>
+                        <label for="showKernels" style="display: inline; font-weight: normal;">Show Conv Kernels</label>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label for="colorScheme">Color Scheme</label>
+                    <select id="colorScheme">
+                        <option value="blue">Blue Scheme</option>
+                        <option value="purple" selected>Purple Scheme</option>
+                        <option value="green">Green Scheme</option>
+                        <option value="orange">Orange Scheme</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label for="backgroundColor">Background Style</label>
+                    <select id="backgroundColor">
+                        <option value="dark" selected>Dark Theme</option>
+                        <option value="grid">Grid Pattern</option>
+                        <option value="gradient">Gradient</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="button-container">
+                <button id="restartBtn" class="button-primary">Restart Animation</button>
+                <button id="pauseBtn" class="button-secondary">Pause</button>
+                <button id="randomizeBtn" class="button-tertiary">Randomize Object</button>
+            </div>
+        </div>
+        
+        <div class="visualization-container">
+            <div class="frame-container">
+                <h3>Source Frame</h3>
+                <canvas id="sourceCanvas" width="500" height="400"></canvas>
+            </div>
+            <div class="frame-container">
+                <h3>Target Frame</h3>
+                <canvas id="targetCanvas" width="500" height="400"></canvas>
+            </div>
+            <div class="process-container">
+                <div class="stage-indicator">
+                    <div class="stage active" id="stage1">Source Frame</div>
+                    <div class="stage" id="stage2">Motion Estimation</div>
+                    <div class="stage" id="stage3">Deformable Convolution</div>
+                    <div class="stage" id="stage4">Target Frame</div>
+                </div>
+                
+                <div class="progress-bar">
+                    <div class="progress" id="progressBar"></div>
+                </div>
+                
+                <canvas id="processCanvas" width="1000" height="600"></canvas>
+                
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #ff5722;"></div>
+                        <span>Motion Vectors</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #8e24aa;"></div>
+                        <span>Original Grid</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #4caf50;"></div>
+                        <span>Deformed Grid</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #2196f3;"></div>
+                        <span>Conv Kernels</span>
+                    </div>
+                </div>
+                
+                <div class="description" id="stageDescription">
+                    Starting with the source frame. Motion vectors will be estimated between source and target.
+                </div>
+            </div>
+        </div>
+        
+        <div class="info-panel">
+            <h3>About Deformable Convolution with Motion Estimation</h3>
+            <p>This visualization demonstrates the concept of deformable convolution in deep learning, where convolution operations adapt their sampling grid based on the input. Here, we use motion vectors between two frames to determine how the convolution kernel should deform.</p>
+            <p>The process follows these steps:</p>
+            <ol>
+                <li><strong>Source & Target Frames:</strong> We start with two distinct frames with known differences.</li>
+                <li><strong>Motion Estimation:</strong> We calculate motion vectors between the frames (predetermined for visual appeal).</li>
+                <li><strong>Deformable Convolution:</strong> The standard convolution grid is offset by the motion vectors, allowing the operation to adapt to the movement.</li>
+                <li><strong>Result:</strong> The convolution follows the motion flow, effectively transforming the source toward the target.</li>
+            </ol>
+            <p>This technique is valuable in video processing, object detection with deformation, and other computer vision tasks where standard convolutions struggle with geometric transformations.</p>
+        </div>
+    </div>
+
+    <script>
+        // DOM elements
+        const sourceCanvas = document.getElementById('sourceCanvas');
+        const targetCanvas = document.getElementById('targetCanvas');
+        const processCanvas = document.getElementById('processCanvas');
+        const restartBtn = document.getElementById('restartBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const randomizeBtn = document.getElementById('randomizeBtn');
+        const progressBar = document.getElementById('progressBar');
+        const stageIndicators = document.querySelectorAll('.stage');
+        const stageDescription = document.getElementById('stageDescription');
+        
+        // Canvas contexts
+        const sourceCtx = sourceCanvas.getContext('2d');
+        const targetCtx = targetCanvas.getContext('2d');
+        const processCtx = processCanvas.getContext('2d');
+        
+        // Control elements
+        const patternOptions = document.querySelectorAll('.pattern-option');
+        const convKernelSizeSelect = document.getElementById('convKernelSize');
+        const motionScaleSlider = document.getElementById('motionScale');
+        const motionScaleValue = document.getElementById('motionScaleValue');
+        const gridDensitySlider = document.getElementById('gridDensity');
+        const gridDensityValue = document.getElementById('gridDensityValue');
+        const animationSpeedSlider = document.getElementById('animationSpeed');
+        const animationSpeedValue = document.getElementById('animationSpeedValue');
+        const objectComplexitySlider = document.getElementById('objectComplexity');
+        const objectComplexityValue = document.getElementById('objectComplexityValue');
+        const showVectorsCheckbox = document.getElementById('showVectors');
+        const showGridCheckbox = document.getElementById('showGrid');
+        const showKernelsCheckbox = document.getElementById('showKernels');
+        const colorSchemeSelect = document.getElementById('colorScheme');
+        const backgroundStyleSelect = document.getElementById('backgroundColor');
+        
+        // State variables
+        let currentPattern = 'circular';
+        let convKernelSize = 5;
+        let motionScale = 1.0;
+        let gridDensity = 20;
+        let animationSpeed = 1.0;
+        let objectComplexity = 3;
+        let showVectors = true;
+        let showGrid = true;
+        let showKernels = true;
+        let colorScheme = 'purple';
+        let backgroundStyle = 'dark';
+        
+        // Animation state
+        let animationId;
+        let isAnimating = true;
+        let currentStage = 1;
+        let stageProgress = 0;
+        let totalProgress = 0;
+        
+        // Object data
+        let sourceObject;
+        let targetObject;
+        
+        // Motion field data
+        let motionVectors = [];
+        
+        // Color schemes
+        const colorSchemes = {
+            blue: {
+                vectorColor: '#ff5722',
+                originalGridColor: '#4527a0',
+                deformedGridColor: '#00897b',
+                kernelColor: '#1976d2',
+                objectColor: '#29b6f6',
+                objectStroke: '#0277bd',
+                background: '#000',
+                highlight: '#64b5f6'
+            },
+            purple: {
+                vectorColor: '#ff5722',
+                originalGridColor: '#8e24aa',
+                deformedGridColor: '#4caf50',
+                kernelColor: '#2196f3',
+                objectColor: '#ce93d8',
+                objectStroke: '#6a1b9a',
+                background: '#000',
+                highlight: '#e040fb'
+            },
+            green: {
+                vectorColor: '#ff5722',
+                originalGridColor: '#0288d1',
+                deformedGridColor: '#689f38',
+                kernelColor: '#00acc1',
+                objectColor: '#81c784',
+                objectStroke: '#2e7d32',
+                background: '#000',
+                highlight: '#b2ff59'
+            },
+            orange: {
+                vectorColor: '#2979ff',
+                originalGridColor: '#795548',
+                deformedGridColor: '#ff9800',
+                kernelColor: '#f44336',
+                objectColor: '#ffb74d',
+                objectStroke: '#e65100',
+                background: '#000',
+                highlight: '#ffab40'
+            }
+        };
+        
+        // Initialize the visualization
+        function init() {
+            // Set up canvases
+            resizeCanvases();
+            
+            // Ensure we have valid controls before proceeding
+            if (!gridDensitySlider || !motionScaleSlider) {
+                console.error("Controls not found. Initialization delayed.");
+                // Try again after a short delay to allow DOM to be ready
+                setTimeout(init, 100);
+                return;
+            }
+            
+            // Generate motion vectors first (based on process canvas)
+            generateMotionVectors();
+            
+            // Check if motion vectors were generated
+            if (!motionVectors || motionVectors.length === 0) {
+                console.error("Motion vectors could not be generated. Using defaults.");
+                // Create a default motion vector if generation failed
+                motionVectors = [{x: 0, y: 0, dx: 0, dy: 0}];
+            }
+            
+            // Generate objects (centered on process canvas)
+            generateObjects();
+            
+            // Draw initial frames
+            drawSourceFrame();
+            drawTargetFrame();
+            
+            // Start animation
+            startAnimation();
+            
+            // Update UI
+            updateUIValues();
+        }
+        
+        // Resize canvases to maintain aspect ratio
+        function resizeCanvases() {
+            const processWidth = processCanvas.parentElement.clientWidth;
+            processCanvas.width = processWidth;
+            processCanvas.height = (processWidth * 0.6);
+        }
+        
+        // Generate random geometric objects based on complexity
+        function generateObjects() {
+            const complexity = parseInt(objectComplexitySlider.value);
+            const colors = colorSchemes[colorScheme];
+            
+            // Base object structure - center it in the process canvas, not source canvas
+            sourceObject = {
+                type: 'complex',
+                x: processCanvas.width / 2,
+                y: processCanvas.height / 2,
+                parts: []
+            };
+            
+            // Generate shapes based on complexity
+            const numShapes = complexity * 2 + 1;
+            
+            for (let i = 0; i < numShapes; i++) {
+                const shapeType = Math.random() < 0.6 ? 'circle' : 'polygon';
+                const size = 20 + Math.random() * 30;
+                const angle = (i / numShapes) * Math.PI * 2;
+                const distance = 30 + Math.random() * 70;
+                
+                const x = sourceObject.x + Math.cos(angle) * distance;
+                const y = sourceObject.y + Math.sin(angle) * distance;
+                
+                if (shapeType === 'circle') {
+                    sourceObject.parts.push({
+                        type: 'circle',
+                        x: x,
+                        y: y,
+                        radius: size / 2,
+                        fillColor: colors.objectColor,
+                        strokeColor: colors.objectStroke
+                    });
+                } else {
+                    const numPoints = 3 + Math.floor(Math.random() * 3);
+                    const points = [];
+                    
+                    for (let j = 0; j < numPoints; j++) {
+                        const pointAngle = (j / numPoints) * Math.PI * 2;
+                        const pointRadius = size / 2 * (0.8 + Math.random() * 0.4);
+                        points.push({
+                            x: x + Math.cos(pointAngle) * pointRadius,
+                            y: y + Math.sin(pointAngle) * pointRadius
+                        });
+                    }
+                    
+                    sourceObject.parts.push({
+                        type: 'polygon',
+                        points: points,
+                        fillColor: colors.objectColor,
+                        strokeColor: colors.objectStroke
+                    });
+                }
+            }
+            
+            // Add main center shape
+            sourceObject.parts.push({
+                type: 'circle',
+                x: sourceObject.x,
+                y: sourceObject.y,
+                radius: 40,
+                fillColor: colors.objectColor,
+                strokeColor: colors.objectStroke
+            });
+            
+            // Clone for target but will be transformed by motion fields
+            targetObject = JSON.parse(JSON.stringify(sourceObject));
+            transformObjectByMotionField(targetObject);
+            
+            // Create copies for the source and target canvases
+            // Scale to fit the smaller canvases
+            const sourceForSmallCanvas = JSON.parse(JSON.stringify(sourceObject));
+            const targetForSmallCanvas = JSON.parse(JSON.stringify(targetObject));
+            
+            // Scale the objects to fit the smaller canvases
+            const scaleX = sourceCanvas.width / processCanvas.width;
+            const scaleY = sourceCanvas.height / processCanvas.height;
+            
+            // Apply scaling to source object for small canvas
+            sourceForSmallCanvas.x *= scaleX;
+            sourceForSmallCanvas.y *= scaleY;
+            for (const part of sourceForSmallCanvas.parts) {
+                if (part.type === 'circle') {
+                    part.x *= scaleX;
+                    part.y *= scaleY;
+                    part.radius *= scaleX; // Assume same scale for x and y
+                } else if (part.type === 'polygon') {
+                    for (const point of part.points) {
+                        point.x *= scaleX;
+                        point.y *= scaleY;
+                    }
+                }
+            }
+            
+            // Apply scaling to target object for small canvas
+            targetForSmallCanvas.x *= scaleX;
+            targetForSmallCanvas.y *= scaleY;
+            for (const part of targetForSmallCanvas.parts) {
+                if (part.type === 'circle') {
+                    part.x *= scaleX;
+                    part.y *= scaleY;
+                    part.radius *= scaleX; // Assume same scale for x and y
+                } else if (part.type === 'polygon') {
+                    for (const point of part.points) {
+                        point.x *= scaleX;
+                        point.y *= scaleY;
+                    }
+                }
+            }
+            
+            // Save the scaled versions for the small canvases
+            window.sourceForSmallCanvas = sourceForSmallCanvas;
+            window.targetForSmallCanvas = targetForSmallCanvas;
+        }
+        
+        // Generate motion vectors based on the selected pattern
+        function generateMotionVectors() {
+            const densityValue = parseInt(gridDensitySlider.value) || 20; // Default if value is invalid
+            const scale = parseFloat(motionScaleSlider.value) || 1.0; // Default if value is invalid
+            motionVectors = [];
+            
+            // Use the process canvas dimensions for motion vectors
+            const width = processCanvas.width;
+            const height = processCanvas.height;
+            
+            const cellWidth = width / densityValue;
+            const cellHeight = height / densityValue;
+            
+            for (let y = 0; y <= densityValue; y++) {
+                for (let x = 0; x <= densityValue; x++) {
+                    const pointX = x * cellWidth;
+                    const pointY = y * cellHeight;
+                    
+                    let dx = 0, dy = 0;
+                    
+                    if (currentPattern === 'circular') {
+                        // Circular pattern - rotation around center
+                        const centerX = width / 2;
+                        const centerY = height / 2;
+                        const dx1 = pointX - centerX;
+                        const dy1 = pointY - centerY;
+                        const distance = Math.sqrt(dx1 * dx1 + dy1 * dy1);
+                        const rotationFactor = 0.5 * scale * (1 - Math.min(1, distance / (width / 2)));
+                        
+                        dx = -dy1 * rotationFactor;
+                        dy = dx1 * rotationFactor;
+                        
+                    } else if (currentPattern === 'swirl') {
+                        // Swirl pattern
+                        const centerX = width / 2;
+                        const centerY = height / 2;
+                        const dx1 = pointX - centerX;
+                        const dy1 = pointY - centerY;
+                        const distance = Math.sqrt(dx1 * dx1 + dy1 * dy1);
+                        const angle = Math.atan2(dy1, dx1);
+                        const rotationFactor = 0.8 * scale * Math.exp(-distance / (width / 4));
+                        
+                        dx = -Math.sin(angle + distance * 0.01) * distance * rotationFactor * 0.2;
+                        dy = Math.cos(angle + distance * 0.01) * distance * rotationFactor * 0.2;
+                        
+                    } else if (currentPattern === 'zoom') {
+                        // Zoom pattern
+                        const centerX = width / 2;
+                        const centerY = height / 2;
+                        const dx1 = pointX - centerX;
+                        const dy1 = pointY - centerY;
+                        
+                        dx = dx1 * 0.15 * scale;
+                        dy = dy1 * 0.15 * scale;
+                        
+                    } else if (currentPattern === 'translation') {
+                        // Translation pattern
+                        dx = 20 * scale;
+                        dy = 10 * scale;
+                    }
+                    
+                    motionVectors.push({
+                        x: pointX,
+                        y: pointY,
+                        dx: dx,
+                        dy: dy
+                    });
+                }
+            }
+        }
+        
+        // Transform the target object using the motion field
+        function transformObjectByMotionField(object) {
+            // Ensure we have a valid object with parts
+            if (!object || !object.parts || !Array.isArray(object.parts)) {
+                console.error("Invalid object to transform");
+                return;
+            }
+            
+            // Transform each part
+            for (const part of object.parts) {
+                if (!part) continue;
+                
+                if (part.type === 'circle') {
+                    // Find the closest motion vector
+                    const vector = findClosestMotionVector(part.x, part.y);
+                    if (vector && typeof vector.dx !== 'undefined' && typeof vector.dy !== 'undefined') {
+                        part.x += vector.dx;
+                        part.y += vector.dy;
+                    }
+                } else if (part.type === 'polygon' && Array.isArray(part.points)) {
+                    // Transform each point of the polygon
+                    for (const point of part.points) {
+                        if (!point) continue;
+                        
+                        const vector = findClosestMotionVector(point.x, point.y);
+                        if (vector && typeof vector.dx !== 'undefined' && typeof vector.dy !== 'undefined') {
+                            point.x += vector.dx;
+                            point.y += vector.dy;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Find the closest motion vector to a point
+        function findClosestMotionVector(x, y) {
+            // Default vector in case array is empty
+            let closestVector = { x: 0, y: 0, dx: 0, dy: 0 };
+            
+            // Check if we have motion vectors
+            if (motionVectors.length === 0) {
+                return closestVector;
+            }
+            
+            closestVector = motionVectors[0];
+            let minDistance = Number.MAX_VALUE;
+            
+            for (const vector of motionVectors) {
+                const distance = Math.sqrt(
+                    Math.pow(vector.x - x, 2) + Math.pow(vector.y - y, 2)
+                );
+                
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestVector = vector;
+                }
+            }
+            
+            return closestVector;
+        }
+        
+        // Interpolate between source and target objects
+        function interpolateObjects(progress) {
+            const result = JSON.parse(JSON.stringify(sourceObject));
+            
+            for (let i = 0; i < result.parts.length; i++) {
+                const sourcePart = sourceObject.parts[i];
+                const targetPart = targetObject.parts[i];
+                
+                if (sourcePart.type === 'circle') {
+                    result.parts[i].x = sourcePart.x + (targetPart.x - sourcePart.x) * progress;
+                    result.parts[i].y = sourcePart.y + (targetPart.y - sourcePart.y) * progress;
+                } else if (sourcePart.type === 'polygon') {
+                    for (let j = 0; j < sourcePart.points.length; j++) {
+                        result.parts[i].points[j].x = sourcePart.points[j].x + 
+                            (targetPart.points[j].x - sourcePart.points[j].x) * progress;
+                        result.parts[i].points[j].y = sourcePart.points[j].y + 
+                            (targetPart.points[j].y - sourcePart.points[j].y) * progress;
+                    }
+                }
+            }
+            
+            return result;
+        }
+        
+        // Draw a geometric object on a canvas
+        function drawObject(ctx, object) {
+            for (const part of object.parts) {
+                if (part.type === 'circle') {
+                    ctx.beginPath();
+                    ctx.arc(part.x, part.y, part.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = part.fillColor;
+                    ctx.fill();
+                    ctx.strokeStyle = part.strokeColor;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                } else if (part.type === 'polygon') {
+                    ctx.beginPath();
+                    ctx.moveTo(part.points[0].x, part.points[0].y);
+                    
+                    for (let i = 1; i < part.points.length; i++) {
+                        ctx.lineTo(part.points[i].x, part.points[i].y);
+                    }
+                    
+                    ctx.closePath();
+                    ctx.fillStyle = part.fillColor;
+                    ctx.fill();
+                    ctx.strokeStyle = part.strokeColor;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            }
+        }
+        
+        // Draw the source frame
+        function drawSourceFrame() {
+            const colors = colorSchemes[colorScheme];
+            
+            // Clear canvas
+            sourceCtx.fillStyle = colors.background;
+            sourceCtx.fillRect(0, 0, sourceCanvas.width, sourceCanvas.height);
+            
+            // Draw grid if enabled
+            if (showGrid) {
+                drawGrid(sourceCtx, null, colors.originalGridColor, 0.3);
+            }
+            
+            // Draw the object - use the scaled version for smaller canvas
+            if (window.sourceForSmallCanvas) {
+                drawObject(sourceCtx, window.sourceForSmallCanvas);
+            } else {
+                // Fallback to original if scaled version doesn't exist
+                drawObject(sourceCtx, sourceObject);
+            }
+        }
+        
+        // Draw the target frame
+        function drawTargetFrame() {
+            const colors = colorSchemes[colorScheme];
+            
+            // Clear canvas
+            targetCtx.fillStyle = colors.background;
+            targetCtx.fillRect(0, 0, targetCanvas.width, targetCanvas.height);
+            
+            // Generate small-canvas specific motion vectors
+            const smallCanvasVectors = generateSmallCanvasVectors();
+            
+            // Draw deformed grid if enabled
+            if (showGrid) {
+                drawGrid(targetCtx, smallCanvasVectors, colors.deformedGridColor, 0.3);
+            }
+            
+            // Draw the transformed object - use the scaled version for smaller canvas
+            if (window.targetForSmallCanvas) {
+                drawObject(targetCtx, window.targetForSmallCanvas);
+            } else {
+                // Fallback to original if scaled version doesn't exist
+                drawObject(targetCtx, targetObject);
+            }
+        }
+        
+        // Generate motion vectors scaled for the smaller canvases
+        function generateSmallCanvasVectors() {
+            if (!motionVectors || motionVectors.length === 0) {
+                return [];
+            }
+            
+            const scaleX = sourceCanvas.width / processCanvas.width;
+            const scaleY = sourceCanvas.height / processCanvas.height;
+            
+            return motionVectors.map(vector => ({
+                x: vector.x * scaleX,
+                y: vector.y * scaleY,
+                dx: vector.dx * scaleX,
+                dy: vector.dy * scaleY
+            }));
+        }
+        
+        // Draw the main process visualization
+        function drawProcessVisualization() {
+            const colors = colorSchemes[colorScheme];
+            
+            // Clear canvas
+            processCtx.fillStyle = colors.background;
+            processCtx.fillRect(0, 0, processCanvas.width, processCanvas.height);
+            
+            // Draw background style
+            drawBackground();
+            
+            if (currentStage === 1) {
+                // Stage 1: Show initial frame
+                const progress = Math.min(1, stageProgress * 2);
+                drawStage1(progress);
+            } else if (currentStage === 2) {
+                // Stage 2: Show motion estimation
+                const progress = Math.min(1, stageProgress * 2);
+                drawStage2(progress);
+            } else if (currentStage === 3) {
+                // Stage 3: Show deformable convolution
+                const progress = Math.min(1, stageProgress * 2);
+                drawStage3(progress);
+            } else if (currentStage === 4) {
+                // Stage 4: Show final frame
+                const progress = Math.min(1, stageProgress * 2);
+                drawStage4(progress);
+            }
+        }
+        
+        // Draw custom background based on style
+        function drawBackground() {
+            const colors = colorSchemes[colorScheme];
+            
+            if (backgroundStyle === 'grid') {
+                // Draw subtle grid pattern
+                processCtx.strokeStyle = 'rgba(100, 100, 100, 0.1)';
+                processCtx.lineWidth = 1;
+                
+                const gridSize = 20;
+                
+                for (let x = 0; x <= processCanvas.width; x += gridSize) {
+                    processCtx.beginPath();
+                    processCtx.moveTo(x, 0);
+                    processCtx.lineTo(x, processCanvas.height);
+                    processCtx.stroke();
+                }
+                
+                for (let y = 0; y <= processCanvas.height; y += gridSize) {
+                    processCtx.beginPath();
+                    processCtx.moveTo(0, y);
+                    processCtx.lineTo(processCanvas.width, y);
+                    processCtx.stroke();
+                }
+            } else if (backgroundStyle === 'gradient') {
+                // Draw gradient background
+                const gradient = processCtx.createLinearGradient(0, 0, processCanvas.width, processCanvas.height);
+                gradient.addColorStop(0, 'rgba(20, 20, 30, 1)');
+                gradient.addColorStop(1, 'rgba(40, 40, 60, 1)');
+                
+                processCtx.fillStyle = gradient;
+                processCtx.fillRect(0, 0, processCanvas.width, processCanvas.height);
+            }
+        }
+        
+        // Draw stage 1: Initial frame
+        function drawStage1(progress) {
+            const colors = colorSchemes[colorScheme];
+            
+            // Draw grid
+            if (showGrid) {
+                drawGrid(processCtx, null, colors.originalGridColor, 0.3 * progress);
+            }
+            
+            // Draw the object with fade-in
+            processCtx.globalAlpha = progress;
+            drawObject(processCtx, sourceObject);
+            processCtx.globalAlpha = 1.0;
+        }
+        
+        // Draw stage 2: Motion estimation
+        function drawStage2(progress) {
+            const colors = colorSchemes[colorScheme];
+            
+            // Draw grid
+            if (showGrid) {
+                drawGrid(processCtx, null, colors.originalGridColor, 0.3);
+            }
+            
+            // Draw the source object
+            drawObject(processCtx, sourceObject);
+            
+            // Draw motion vectors with animation
+            if (showVectors) {
+                drawMotionVectors(progress);
+            }
+        }
+        
+        // Draw stage 3: Deformable convolution
+        function drawStage3(progress) {
+            const colors = colorSchemes[colorScheme];
+            
+            // Define substages for clearer explanation
+            // 0-0.3: Show original convolution
+            // 0.3-0.7: Show deformation process (slow motion)
+            // 0.7-1.0: Show result with deformed convolution
+            
+            let subProgress;
+            let phaseText = "";
+            let isZoomPhase = false;
+            
+            if (progress < 0.3) {
+                // Phase 1: Show standard convolution
+                subProgress = progress / 0.3;
+                phaseText = "Standard Convolution";
+                
+                // Draw original grid
+                if (showGrid) {
+                    drawGrid(processCtx, null, colors.originalGridColor, 0.3);
+                }
+                
+                // Draw source object
+                drawObject(processCtx, sourceObject);
+                
+                // Draw motion vectors faded
+                if (showVectors) {
+                    processCtx.globalAlpha = 0.3;
+                    drawMotionVectors(1.0);
+                    processCtx.globalAlpha = 1.0;
+                }
+                
+                // Draw standard convolution kernels
+                if (showKernels) {
+                    drawStandardKernels(subProgress);
+                }
+                
+            } else if (progress < 0.7) {
+                // Phase 2: Show deformation process (slow motion)
+                subProgress = (progress - 0.3) / 0.4;
+                phaseText = "Kernel Deformation Process";
+                isZoomPhase = true;
+                
+                // Draw transition between grids
+                if (showGrid) {
+                    drawGrid(processCtx, null, colors.originalGridColor, 0.3 * (1 - subProgress));
+                    drawGrid(processCtx, motionVectors, colors.deformedGridColor, 0.3 * subProgress);
+                }
+                
+                // Interpolate object slightly
+                const interpObject = interpolateObjects(subProgress * 0.3);
+                drawObject(processCtx, interpObject);
+                
+                // Draw motion vectors
+                if (showVectors) {
+                    drawMotionVectors(1.0);
+                }
+                
+                // Draw deforming convolution kernels and zoom view
+                if (showKernels) {
+                    drawDeformingKernels(subProgress);
+                    
+                    // Draw zoomed view of a single kernel deformation
+                    drawZoomedKernelView(subProgress);
+                }
+                
+            } else {
+                // Phase 3: Show result with deformed convolution
+                subProgress = (progress - 0.7) / 0.3;
+                phaseText = "Deformable Convolution Applied";
+                
+                // Draw deformed grid
+                if (showGrid) {
+                    drawGrid(processCtx, motionVectors, colors.deformedGridColor, 0.3);
+                }
+                
+                // Interpolate object more significantly
+                const interpObject = interpolateObjects(0.3 + subProgress * 0.7);
+                drawObject(processCtx, interpObject);
+                
+                // Draw motion vectors
+                if (showVectors) {
+                    drawMotionVectors(1.0);
+                }
+                
+                // Draw deformed convolution kernels
+                if (showKernels) {
+                    drawDeformedKernels(subProgress);
+                }
+            }
+            
+            // Draw explanatory text for current phase
+            processCtx.font = "bold 18px Arial";
+            processCtx.fillStyle = "#ffffff";
+            processCtx.textAlign = "center";
+            processCtx.fillText(phaseText, processCanvas.width / 2, 30);
+            
+            // Draw detailed explanation based on the phase
+            processCtx.font = "14px Arial";
+            processCtx.fillStyle = "#cccccc";
+            
+            let explanationText = "";
+            if (progress < 0.3) {
+                explanationText = "Standard convolution uses a fixed sampling grid for all spatial locations";
+                
+                // Add more detailed explanation as multiple lines
+                const explanationLines = [
+                    "In standard convolution, each filter uses the same sampling pattern at every location",
+                    "This works well for many tasks but struggles with geometric transformations"
+                ];
+                
+                for (let i = 0; i < explanationLines.length; i++) {
+                    processCtx.fillText(explanationLines[i], processCanvas.width / 2, 55 + (i * 20));
+                }
+                
+            } else if (progress < 0.7) {
+                explanationText = "Motion vectors determine how the convolution kernel should deform at each location";
+                
+                // Add more detailed explanation as multiple lines
+                const explanationLines = [
+                    "Each sampling point in the kernel grid is offset according to the local motion vector",
+                    "This allows the kernel to adapt to the geometric transformation between frames",
+                    "Different parts of the kernel can move in different directions based on local motion"
+                ];
+                
+                for (let i = 0; i < explanationLines.length; i++) {
+                    processCtx.fillText(explanationLines[i], processCanvas.width / 2, 55 + (i * 20));
+                }
+                
+            } else {
+                explanationText = "The deformed kernels adapt to the motion flow, sampling from appropriate locations";
+                
+                // Add more detailed explanation as multiple lines
+                const explanationLines = [
+                    "The kernel now follows the motion pattern, improving feature alignment",
+                    "This is especially useful for objects that undergo geometric transformations",
+                    "Unlike standard convolution, deformable convolution can handle rotation, scaling, and distortion"
+                ];
+                
+                for (let i = 0; i < explanationLines.length; i++) {
+                    processCtx.fillText(explanationLines[i], processCanvas.width / 2, 55 + (i * 20));
+                }
+            }
+            
+            // Add indicator for slow motion during zoom phase
+            if (isZoomPhase) {
+                processCtx.font = "bold 14px Arial";
+                processCtx.fillStyle = "#ffcc00";
+                processCtx.textAlign = "right";
+                processCtx.fillText("SLOW MOTION", processCanvas.width - 20, 30);
+            }
+        }
+        
+        // Draw standard convolution kernels
+        function drawStandardKernels(progress) {
+            const colors = colorSchemes[colorScheme];
+            const kernelSize = parseInt(convKernelSizeSelect.value);
+            
+            // Calculate how many kernels to show
+            const totalKernels = Math.floor(progress * 20);
+            const cellSize = 5;
+            const halfKernel = Math.floor(kernelSize / 2);
+            
+            for (let i = 0; i < totalKernels; i++) {
+                // Arrange kernels in a grid pattern for clarity
+                const gridCols = 5;
+                const kernelSpacingX = processCanvas.width / (gridCols + 1);
+                const kernelSpacingY = processCanvas.height / 4;
+                
+                const col = i % gridCols;
+                const row = Math.floor(i / gridCols);
+                
+                const x = kernelSpacingX * (col + 1);
+                const y = kernelSpacingY * (row + 1);
+                
+                // Draw standard kernel
+                processCtx.strokeStyle = colors.kernelColor;
+                processCtx.lineWidth = 2;
+                
+                // Draw central point of kernel
+                processCtx.fillStyle = colors.kernelColor;
+                processCtx.beginPath();
+                processCtx.arc(x, y, 3, 0, Math.PI * 2);
+                processCtx.fill();
+                
+                // Draw kernel grid
+                for (let ky = -halfKernel; ky <= halfKernel; ky++) {
+                    for (let kx = -halfKernel; kx <= halfKernel; kx++) {
+                        processCtx.strokeRect(
+                            x + kx * cellSize,
+                            y + ky * cellSize,
+                            cellSize,
+                            cellSize
+                        );
+                    }
+                }
+                
+                // Add highlighting for center position
+                processCtx.strokeStyle = "#ffffff";
+                processCtx.lineWidth = 1;
+                processCtx.strokeRect(
+                    x - halfKernel * cellSize - 2,
+                    y - halfKernel * cellSize - 2,
+                    kernelSize * cellSize + 4,
+                    kernelSize * cellSize + 4
+                );
+            }
+        }
+        
+        // Draw convolution kernels deforming gradually
+        function drawDeformingKernels(progress) {
+            const colors = colorSchemes[colorScheme];
+            const kernelSize = parseInt(convKernelSizeSelect.value);
+            const cellSize = 5;
+            const halfKernel = Math.floor(kernelSize / 2);
+            
+            // Only show a few kernels to avoid clutter
+            const kernelLocations = [
+                { x: processCanvas.width * 0.25, y: processCanvas.height * 0.3 },
+                { x: processCanvas.width * 0.75, y: processCanvas.height * 0.3 },
+                { x: processCanvas.width * 0.25, y: processCanvas.height * 0.7 },
+                { x: processCanvas.width * 0.75, y: processCanvas.height * 0.7 },
+                { x: processCanvas.width * 0.5, y: processCanvas.height * 0.5 }
+            ];
+            
+            for (const location of kernelLocations) {
+                const x = location.x;
+                const y = location.y;
+                
+                // Find motion vector at this position
+                const centerVector = findClosestMotionVector(x, y) || {dx: 0, dy: 0};
+                
+                // Draw motion vector from kernel center
+                processCtx.strokeStyle = colors.vectorColor;
+                processCtx.fillStyle = colors.vectorColor;
+                processCtx.lineWidth = 2;
+                
+                // Draw line
+                processCtx.beginPath();
+                processCtx.moveTo(x, y);
+                processCtx.lineTo(x + centerVector.dx, y + centerVector.dy);
+                processCtx.stroke();
+                
+                // Draw arrowhead
+                const arrowSize = 5;
+                const angle = Math.atan2(centerVector.dy, centerVector.dx);
+                
+                processCtx.beginPath();
+                processCtx.moveTo(x + centerVector.dx, y + centerVector.dy);
+                processCtx.lineTo(
+                    x + centerVector.dx - arrowSize * Math.cos(angle - Math.PI / 6),
+                    y + centerVector.dy - arrowSize * Math.sin(angle - Math.PI / 6)
+                );
+                processCtx.lineTo(
+                    x + centerVector.dx - arrowSize * Math.cos(angle + Math.PI / 6),
+                    y + centerVector.dy - arrowSize * Math.sin(angle + Math.PI / 6)
+                );
+                processCtx.closePath();
+                processCtx.fill();
+                
+                // Draw original kernel grid (fading out)
+                processCtx.strokeStyle = `rgba(${hexToRgb(colors.kernelColor)}, ${1 - progress})`;
+                processCtx.lineWidth = 1.5;
+                
+                for (let ky = -halfKernel; ky <= halfKernel; ky++) {
+                    for (let kx = -halfKernel; kx <= halfKernel; kx++) {
+                        processCtx.strokeRect(
+                            x + kx * cellSize,
+                            y + ky * cellSize,
+                            cellSize,
+                            cellSize
+                        );
+                    }
+                }
+                
+                // Draw deforming kernel grid
+                processCtx.strokeStyle = colors.kernelColor;
+                processCtx.lineWidth = 1.5;
+                
+                for (let ky = -halfKernel; ky <= halfKernel; ky++) {
+                    for (let kx = -halfKernel; kx <= halfKernel; kx++) {
+                        // Calculate deformation for this kernel point
+                        const pointX = x + kx * cellSize;
+                        const pointY = y + ky * cellSize;
+                        const pointVector = findClosestMotionVector(pointX, pointY) || {dx: 0, dy: 0};
+                        
+                        processCtx.strokeRect(
+                            pointX + pointVector.dx * progress,
+                            pointY + pointVector.dy * progress,
+                            cellSize,
+                            cellSize
+                        );
+                    }
+                }
+            }
+        }
+        
+        // Draw zoomed view of a single kernel deformation
+        function drawZoomedKernelView(progress) {
+            const colors = colorSchemes[colorScheme];
+            const kernelSize = parseInt(convKernelSizeSelect.value);
+            const cellSize = 5;
+            const halfKernel = Math.floor(kernelSize / 2);
+            
+            // Create a zoom region in top-right corner
+            const zoomX = processCanvas.width * 0.75;
+            const zoomY = processCanvas.height * 0.25;
+            const zoomSize = 180;
+            const zoomScale = 3;
+            
+            // Draw zoom region background
+            processCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            processCtx.fillRect(zoomX - zoomSize/2, zoomY - zoomSize/2, zoomSize, zoomSize);
+            
+            // Draw zoom region border
+            processCtx.strokeStyle = '#ffffff';
+            processCtx.lineWidth = 2;
+            processCtx.strokeRect(zoomX - zoomSize/2, zoomY - zoomSize/2, zoomSize, zoomSize);
+            
+            // Draw "Zoom View" label
+            processCtx.font = "bold 14px Arial";
+            processCtx.fillStyle = "#ffffff";
+            processCtx.textAlign = "center";
+            processCtx.fillText("Zoom: Kernel Deformation", zoomX, zoomY - zoomSize/2 - 10);
+            
+            // Select kernel to zoom (use center of canvas)
+            const kernelCenterX = processCanvas.width * 0.5;
+            const kernelCenterY = processCanvas.height * 0.5;
+            
+            // Get motion vector at kernel center
+            const centerVector = findClosestMotionVector(kernelCenterX, kernelCenterY) || {dx: 0, dy: 0};
+            
+            // Save context for zoom view
+            processCtx.save();
+            
+            // Create clipping region for zoom view
+            processCtx.beginPath();
+            processCtx.rect(zoomX - zoomSize/2, zoomY - zoomSize/2, zoomSize, zoomSize);
+            processCtx.clip();
+            
+            // Transform for zoom view
+            processCtx.translate(zoomX, zoomY);
+            processCtx.scale(zoomScale, zoomScale);
+            processCtx.translate(-kernelCenterX, -kernelCenterY);
+            
+            // Draw motion vector
+            processCtx.strokeStyle = colors.vectorColor;
+            processCtx.fillStyle = colors.vectorColor;
+            processCtx.lineWidth = 1;
+            
+            // Draw line
+            processCtx.beginPath();
+            processCtx.moveTo(kernelCenterX, kernelCenterY);
+            processCtx.lineTo(kernelCenterX + centerVector.dx, kernelCenterY + centerVector.dy);
+            processCtx.stroke();
+            
+            // Draw arrowhead
+            const arrowSize = 2;
+            const angle = Math.atan2(centerVector.dy, centerVector.dx);
+            
+            processCtx.beginPath();
+            processCtx.moveTo(kernelCenterX + centerVector.dx, kernelCenterY + centerVector.dy);
+            processCtx.lineTo(
+                kernelCenterX + centerVector.dx - arrowSize * Math.cos(angle - Math.PI / 6),
+                kernelCenterY + centerVector.dy - arrowSize * Math.sin(angle - Math.PI / 6)
+            );
+            processCtx.lineTo(
+                kernelCenterX + centerVector.dx - arrowSize * Math.cos(angle + Math.PI / 6),
+                kernelCenterY + centerVector.dy - arrowSize * Math.sin(angle + Math.PI / 6)
+            );
+            processCtx.closePath();
+            processCtx.fill();
+            
+            // Draw original kernel (fading out)
+            processCtx.strokeStyle = `rgba(${hexToRgb(colors.kernelColor)}, ${1 - progress})`;
+            processCtx.lineWidth = 0.5;
+            
+            for (let ky = -halfKernel; ky <= halfKernel; ky++) {
+                for (let kx = -halfKernel; kx <= halfKernel; kx++) {
+                    processCtx.strokeRect(
+                        kernelCenterX + kx * cellSize,
+                        kernelCenterY + ky * cellSize,
+                        cellSize,
+                        cellSize
+                    );
+                }
+            }
+            
+            // Draw deforming kernel
+            processCtx.strokeStyle = colors.kernelColor;
+            processCtx.lineWidth = 0.5;
+            
+            // Track deformed positions for arrows
+            const originalPositions = [];
+            const deformedPositions = [];
+            
+            for (let ky = -halfKernel; ky <= halfKernel; ky++) {
+                for (let kx = -halfKernel; kx <= halfKernel; kx++) {
+                    // Calculate original and deformed positions
+                    const origX = kernelCenterX + kx * cellSize;
+                    const origY = kernelCenterY + ky * cellSize;
+                    
+                    // Get motion vector for this specific kernel point
+                    const pointVector = findClosestMotionVector(origX, origY) || {dx: 0, dy: 0};
+                    
+                    const deformedX = origX + pointVector.dx * progress;
+                    const deformedY = origY + pointVector.dy * progress;
+                    
+                    // Store positions for arrows
+                    originalPositions.push({x: origX, y: origY});
+                    deformedPositions.push({x: deformedX, y: deformedY});
+                    
+                    // Draw deformed kernel cell
+                    processCtx.strokeRect(
+                        deformedX,
+                        deformedY,
+                        cellSize,
+                        cellSize
+                    );
+                    
+                    // Highlight center cell
+                    if (kx === 0 && ky === 0) {
+                        processCtx.fillStyle = `rgba(${hexToRgb(colors.kernelColor)}, 0.5)`;
+                        processCtx.fillRect(deformedX, deformedY, cellSize, cellSize);
+                    }
+                }
+            }
+            
+            // Draw motion arrows between original and deformed positions
+            processCtx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            processCtx.lineWidth = 0.3;
+            
+            for (let i = 0; i < originalPositions.length; i++) {
+                const origPos = originalPositions[i];
+                const defPos = deformedPositions[i];
+                
+                // Only draw arrows if there's significant movement
+                const dx = defPos.x - origPos.x;
+                const dy = defPos.y - origPos.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist > 1) {
+                    // Draw dotted line
+                    processCtx.beginPath();
+                    processCtx.setLineDash([1, 1]);
+                    processCtx.moveTo(origPos.x + cellSize/2, origPos.y + cellSize/2);
+                    processCtx.lineTo(defPos.x + cellSize/2, defPos.y + cellSize/2);
+                    processCtx.stroke();
+                    processCtx.setLineDash([]);
+                }
+            }
+            
+            // Restore context
+            processCtx.restore();
+            
+            // Draw explanatory labels for zoom view
+            processCtx.font = "12px Arial";
+            processCtx.fillStyle = "#ffffff";
+            processCtx.textAlign = "left";
+            
+            const labelX = zoomX - zoomSize/2 + 10;
+            processCtx.fillText("1. Motion vector (orange)", labelX, zoomY + zoomSize/2 - 60);
+            processCtx.fillText("2. Original kernel grid (fading)", labelX, zoomY + zoomSize/2 - 40);
+            processCtx.fillText("3. Deformed kernel grid (purple)", labelX, zoomY + zoomSize/2 - 20);
+        }
+        
+        // Draw fully deformed kernels for the final phase
+        function drawDeformedKernels(progress) {
+            const colors = colorSchemes[colorScheme];
+            const kernelSize = parseInt(convKernelSizeSelect.value);
+            
+            // Calculate how many kernels to show based on progress
+            const maxKernels = 30;
+            const totalKernels = Math.floor(progress * maxKernels);
+            
+            for (let i = 0; i < totalKernels; i++) {
+                // Distribute kernels across the canvas
+                const x = Math.random() * processCanvas.width;
+                const y = Math.random() * processCanvas.height;
+                
+                drawSingleDeformedKernel(x, y, kernelSize, colors);
+            }
+        }
+        
+        // Draw a single deformed kernel at specified position
+        function drawSingleDeformedKernel(x, y, kernelSize, colors) {
+            const cellSize = 5;
+            const halfKernel = Math.floor(kernelSize / 2);
+            
+            // Find motion vector at kernel center
+            const centerVector = findClosestMotionVector(x, y) || {dx: 0, dy: 0};
+            
+            // Draw deformed kernel grid
+            processCtx.strokeStyle = colors.kernelColor;
+            processCtx.lineWidth = 1.5;
+            
+            for (let ky = -halfKernel; ky <= halfKernel; ky++) {
+                for (let kx = -halfKernel; kx <= halfKernel; kx++) {
+                    // Calculate deformation for this kernel point
+                    const pointX = x + kx * cellSize;
+                    const pointY = y + ky * cellSize;
+                    const pointVector = findClosestMotionVector(pointX, pointY) || {dx: 0, dy: 0};
+                    
+                    processCtx.strokeRect(
+                        pointX + pointVector.dx,
+                        pointY + pointVector.dy,
+                        cellSize,
+                        cellSize
+                    );
+                }
+            }
+            
+            // Highlight the sampling center
+            processCtx.fillStyle = colors.kernelColor;
+            processCtx.beginPath();
+            processCtx.arc(x + centerVector.dx, y + centerVector.dy, 2, 0, Math.PI * 2);
+            processCtx.fill();
+        }
+        
+        // Draw stage 4: Final frame
+        function drawStage4(progress) {
+            const colors = colorSchemes[colorScheme];
+            
+            // Draw deformed grid
+            if (showGrid) {
+                drawGrid(processCtx, motionVectors, colors.deformedGridColor, 0.3);
+            }
+            
+            // Draw the target object with slight highlight animation
+            const targetObjectCopy = JSON.parse(JSON.stringify(targetObject));
+            
+            // Add pulsing highlight effect
+            if (progress > 0.5) {
+                const pulseStrength = Math.sin((progress - 0.5) * Math.PI * 3) * 0.5 + 0.5;
+                for (const part of targetObjectCopy.parts) {
+                    // Adjust color to include highlight
+                    const baseColor = part.fillColor;
+                    const highlightColor = colors.highlight;
+                    
+                    // Simple linear interpolation between colors (not accurate but sufficient)
+                    part.fillColor = lerpColor(baseColor, highlightColor, pulseStrength * 0.3);
+                }
+            }
+            
+            drawObject(processCtx, targetObjectCopy);
+        }
+        
+        // Draw grid with optional deformation
+        function drawGrid(ctx, deformVectors, color, alpha) {
+            const cellSize = Math.min(ctx.canvas.width, ctx.canvas.height) / gridDensity;
+            
+            ctx.strokeStyle = color;
+            ctx.globalAlpha = alpha;
+            ctx.lineWidth = 1;
+            
+            // Draw vertical lines
+            for (let x = 0; x <= ctx.canvas.width; x += cellSize) {
+                ctx.beginPath();
+                
+                if (deformVectors) {
+                    // Draw deformed vertical line
+                    for (let y = 0; y <= ctx.canvas.height; y += 5) {
+                        const vector = findClosestDeformVector(x, y, deformVectors);
+                        
+                        if (y === 0) {
+                            ctx.moveTo(x + vector.dx, y + vector.dy);
+                        } else {
+                            ctx.lineTo(x + vector.dx, y + vector.dy);
+                        }
+                    }
+                } else {
+                    // Draw straight vertical line
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, ctx.canvas.height);
+                }
+                
+                ctx.stroke();
+            }
+            
+            // Draw horizontal lines
+            for (let y = 0; y <= ctx.canvas.height; y += cellSize) {
+                ctx.beginPath();
+                
+                if (deformVectors) {
+                    // Draw deformed horizontal line
+                    for (let x = 0; x <= ctx.canvas.width; x += 5) {
+                        const vector = findClosestDeformVector(x, y, deformVectors);
+                        
+                        if (x === 0) {
+                            ctx.moveTo(x + vector.dx, y + vector.dy);
+                        } else {
+                            ctx.lineTo(x + vector.dx, y + vector.dy);
+                        }
+                    }
+                } else {
+                    // Draw straight horizontal line
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(ctx.canvas.width, y);
+                }
+                
+                ctx.stroke();
+            }
+            
+            ctx.globalAlpha = 1.0;
+        }
+        
+        // Find the closest deformation vector
+        function findClosestDeformVector(x, y, vectors) {
+            let closestVector = { dx: 0, dy: 0 };
+            
+            // Check if vectors array is valid and not empty
+            if (!vectors || vectors.length === 0) {
+                return closestVector;
+            }
+            
+            let minDistance = Number.MAX_VALUE;
+            
+            for (const vector of vectors) {
+                // Ensure vector has required properties
+                if (!vector || typeof vector.x === 'undefined') continue;
+                
+                const distance = Math.sqrt(
+                    Math.pow(vector.x - x, 2) + Math.pow(vector.y - y, 2)
+                );
+                
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestVector = {
+                        dx: vector.dx || 0,
+                        dy: vector.dy || 0
+                    };
+                }
+            }
+            
+            return closestVector;
+        }
+        
+        // Draw motion vectors with animation
+        function drawMotionVectors(progress) {
+            const colors = colorSchemes[colorScheme];
+            const displayVectors = motionVectors.filter(
+                (_, i) => i % Math.ceil(motionVectors.length / 100) === 0
+            );
+            
+            for (const vector of displayVectors) {
+                processCtx.strokeStyle = colors.vectorColor;
+                processCtx.fillStyle = colors.vectorColor;
+                processCtx.lineWidth = 2;
+                
+                // Calculate animated endpoints
+                const endX = vector.x + vector.dx * progress;
+                const endY = vector.y + vector.dy * progress;
+                
+                // Draw line
+                processCtx.beginPath();
+                processCtx.moveTo(vector.x, vector.y);
+                processCtx.lineTo(endX, endY);
+                processCtx.stroke();
+                
+                // Draw arrowhead
+                if (progress > 0.2) {
+                    const arrowSize = 5;
+                    const angle = Math.atan2(vector.dy, vector.dx);
+                    
+                    processCtx.beginPath();
+                    processCtx.moveTo(endX, endY);
+                    processCtx.lineTo(
+                        endX - arrowSize * Math.cos(angle - Math.PI / 6),
+                        endY - arrowSize * Math.sin(angle - Math.PI / 6)
+                    );
+                    processCtx.lineTo(
+                        endX - arrowSize * Math.cos(angle + Math.PI / 6),
+                        endY - arrowSize * Math.sin(angle + Math.PI / 6)
+                    );
+                    processCtx.closePath();
+                    processCtx.fill();
+                }
+            }
+        }
+        
+        // Draw convolution kernels with animation
+        function drawConvolutionKernels(progress) {
+            const colors = colorSchemes[colorScheme];
+            const kernelSize = parseInt(convKernelSizeSelect.value);
+            const spacing = processCanvas.width / 10;
+            
+            // Calculate how many kernels to show
+            const totalKernels = Math.floor(progress * 15);
+            
+            for (let i = 0; i < totalKernels; i++) {
+                // Randomly position kernels
+                const x = Math.random() * processCanvas.width;
+                const y = Math.random() * processCanvas.height;
+                
+                // Find motion vector at this position
+                const vector = findClosestMotionVector(x, y) || {dx: 0, dy: 0};
+                
+                // Draw standard kernel grid
+                processCtx.strokeStyle = `rgba(${hexToRgb(colors.kernelColor)}, 0.3)`;
+                processCtx.lineWidth = 1;
+                
+                const halfKernel = Math.floor(kernelSize / 2);
+                const cellSize = 5;
+                
+                // Draw standard grid
+                for (let ky = -halfKernel; ky <= halfKernel; ky++) {
+                    for (let kx = -halfKernel; kx <= halfKernel; kx++) {
+                        processCtx.strokeRect(
+                            x + kx * cellSize,
+                            y + ky * cellSize,
+                            cellSize,
+                            cellSize
+                        );
+                    }
+                }
+                
+                // Draw deformed kernel grid
+                processCtx.strokeStyle = colors.kernelColor;
+                processCtx.lineWidth = 1.5;
+                
+                for (let ky = -halfKernel; ky <= halfKernel; ky++) {
+                    for (let kx = -halfKernel; kx <= halfKernel; kx++) {
+                        // Calculate deformation for this kernel point
+                        const pointX = x + kx * cellSize;
+                        const pointY = y + ky * cellSize;
+                        const pointVector = findClosestMotionVector(pointX, pointY) || {dx: 0, dy: 0};
+                        
+                        processCtx.strokeRect(
+                            pointX + pointVector.dx * progress,
+                            pointY + pointVector.dy * progress,
+                            cellSize,
+                            cellSize
+                        );
+                    }
+                }
+            }
+        }
+        
+        // Start the animation sequence
+        function startAnimation() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            
+            currentStage = 1;
+            stageProgress = 0;
+            totalProgress = 0;
+            updateStageIndicators();
+            
+            animate();
+        }
+        
+        // Animation loop
+        function animate() {
+            // Update progress based on animation speed
+            if (isAnimating) {
+                // Get base animation speed
+                const baseSpeed = parseFloat(animationSpeedSlider.value);
+                let speed = baseSpeed;
+                
+                // Special handling for different stages
+                if (currentStage === 3) {
+                    // Slow down the entire deformable convolution stage
+                    // Different phases get different speeds
+                    if (stageProgress < 0.3) {
+                        // Phase 1: Standard convolution - slightly slower
+                        speed = baseSpeed * 0.6;
+                    } else if (stageProgress >= 0.3 && stageProgress < 0.7) {
+                        // Phase 2: Kernel deformation with zoom - very slow
+                        speed = baseSpeed * 0.25;
+                    } else {
+                        // Phase 3: Final application - slightly slower
+                        speed = baseSpeed * 0.5;
+                    }
+                } else if (currentStage === 4) {
+                    // Make the result stage slower too so users can see the final state
+                    speed = baseSpeed * 0.7;
+                }
+                
+                stageProgress += 0.005 * speed;
+                
+                // Move to next stage if current stage is complete
+                if (stageProgress >= 1.0) {
+                    stageProgress = 0;
+                    currentStage++;
+                    
+                    if (currentStage > 4) {
+                        currentStage = 1; // Loop back to start
+                    }
+                    
+                    updateStageIndicators();
+                }
+                
+                // Calculate total progress (0-100%)
+                // Adjust calculation to give more weight to Stage 3 (deformable convolution)
+                if (currentStage <= 2) {
+                    totalProgress = ((currentStage - 1) * 20 + stageProgress * 20) / 100; // 20% each for stages 1-2
+                } else if (currentStage === 3) {
+                    totalProgress = (40 + stageProgress * 40) / 100; // 40% for stage 3
+                } else {
+                    totalProgress = (80 + stageProgress * 20) / 100; // 20% for stage 4
+                }
+                
+                progressBar.style.width = `${totalProgress * 100}%`;
+            }
+            
+            // Draw the current stage
+            drawProcessVisualization();
+            
+            // Continue animation
+            animationId = requestAnimationFrame(animate);
+        }
+        
+        // Update stage indicators
+        function updateStageIndicators() {
+            stageIndicators.forEach((indicator, index) => {
+                if (index + 1 === currentStage) {
+                    indicator.classList.add('active');
+                } else {
+                    indicator.classList.remove('active');
+                }
+            });
+            
+            // Update stage description
+            switch(currentStage) {
+                case 1:
+                    stageDescription.textContent = "Starting with the source frame. Motion vectors will be estimated between source and target.";
+                    break;
+                case 2:
+                    stageDescription.textContent = "Estimating motion vectors between the source and target frames. These vectors define how each pixel moves.";
+                    break;
+                case 3:
+                    // More detailed explanation for the deformable convolution step
+                    if (stageProgress < 0.3) {
+                        stageDescription.textContent = "Standard convolution applies a fixed sampling pattern at every spatial location, limiting its ability to handle geometric transformations.";
+                    } else if (stageProgress < 0.7) {
+                        stageDescription.textContent = "Deformable convolution adapts the sampling locations based on motion vectors, allowing the kernel to follow the underlying transformation.";
+                    } else {
+                        stageDescription.textContent = "The adapted kernels can now better align features between frames, improving the ability to handle rotation, scaling, and other deformations.";
+                    }
+                    break;
+                case 4:
+                    stageDescription.textContent = "The result approaches the target frame as the convolution kernels follow the motion field, effectively handling the geometric transformation.";
+                    break;
+            }
+        }
+        
+        // Update UI values based on current settings
+        function updateUIValues() {
+            motionScaleValue.textContent = `${motionScaleSlider.value}×`;
+            gridDensityValue.textContent = `${gridDensitySlider.value}×${gridDensitySlider.value}`;
+            animationSpeedValue.textContent = `${animationSpeedSlider.value}×`;
+            
+            // Map object complexity value to text
+            const complexityTexts = ["Very Simple", "Simple", "Medium", "Complex", "Very Complex"];
+            objectComplexityValue.textContent = complexityTexts[parseInt(objectComplexitySlider.value) - 1];
+        }
+        
+        // Helper function to interpolate between two colors
+        function lerpColor(color1, color2, amount) {
+            const rgb1 = hexToRgb(color1);
+            const rgb2 = hexToRgb(color2);
+            
+            const r = Math.floor(rgb1.r + (rgb2.r - rgb1.r) * amount);
+            const g = Math.floor(rgb1.g + (rgb2.g - rgb1.g) * amount);
+            const b = Math.floor(rgb1.b + (rgb2.b - rgb1.b) * amount);
+            
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+        
+        // Helper function to convert hex to rgb
+        function hexToRgb(hex) {
+            // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
+            const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+            hex = hex.replace(shorthandRegex, (m, r, g, b) => {
+                return r + r + g + g + b + b;
+            });
+            
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : { r: 0, g: 0, b: 0 };
+        }
+        
+        // Event listeners
+        restartBtn.addEventListener('click', () => {
+            startAnimation();
+        });
+        
+        pauseBtn.addEventListener('click', () => {
+            isAnimating = !isAnimating;
+            pauseBtn.textContent = isAnimating ? 'Pause' : 'Resume';
+        });
+        
+        randomizeBtn.addEventListener('click', () => {
+            generateObjects();
+            drawSourceFrame();
+            drawTargetFrame();
+        });
+        
+        patternOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                patternOptions.forEach(opt => opt.classList.remove('active'));
+                option.classList.add('active');
+                currentPattern = option.dataset.pattern;
+                
+                generateMotionVectors();
+                generateObjects(); // Regenerate objects with new motion field
+                drawSourceFrame();
+                drawTargetFrame();
+            });
+        });
+        
+        convKernelSizeSelect.addEventListener('change', () => {
+            convKernelSize = parseInt(convKernelSizeSelect.value);
+        });
+        
+        motionScaleSlider.addEventListener('input', () => {
+            motionScale = parseFloat(motionScaleSlider.value);
+            motionScaleValue.textContent = `${motionScale.toFixed(1)}×`;
+            
+            generateMotionVectors();
+            generateObjects(); // Regenerate objects with new motion field
+            drawSourceFrame();
+            drawTargetFrame();
+        });
+        
+        gridDensitySlider.addEventListener('input', () => {
+            gridDensity = parseInt(gridDensitySlider.value);
+            gridDensityValue.textContent = `${gridDensity}×${gridDensity}`;
+            
+            generateMotionVectors();
+            drawSourceFrame();
+            drawTargetFrame();
+        });
+        
+        animationSpeedSlider.addEventListener('input', () => {
+            animationSpeed = parseFloat(animationSpeedSlider.value);
+            animationSpeedValue.textContent = `${animationSpeed.toFixed(1)}×`;
+        });
+        
+        objectComplexitySlider.addEventListener('input', () => {
+            objectComplexity = parseInt(objectComplexitySlider.value);
+            
+            // Map value to text
+            const complexityTexts = ["Very Simple", "Simple", "Medium", "Complex", "Very Complex"];
+            objectComplexityValue.textContent = complexityTexts[objectComplexity - 1];
+            
+            generateObjects();
+            drawSourceFrame();
+            drawTargetFrame();
+        });
+        
+        showVectorsCheckbox.addEventListener('change', () => {
+            showVectors = showVectorsCheckbox.checked;
+        });
+        
+        showGridCheckbox.addEventListener('change', () => {
+            showGrid = showGridCheckbox.checked;
+            drawSourceFrame();
+            drawTargetFrame();
+        });
+        
+        showKernelsCheckbox.addEventListener('change', () => {
+            showKernels = showKernelsCheckbox.checked;
+        });
+        
+        colorSchemeSelect.addEventListener('change', () => {
+            colorScheme = colorSchemeSelect.value;
+            generateObjects();
+            drawSourceFrame();
+            drawTargetFrame();
+        });
+        
+        backgroundStyleSelect.addEventListener('change', () => {
+            backgroundStyle = backgroundStyleSelect.value;
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            resizeCanvases();
+            drawProcessVisualization();
+        });
+        
+        // Initialize the visualization
+        init();
+    </script>
+</body>
+</html>
